@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kalkulačka cen elektřiny</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .main-container {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px 25px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 1.8em;
+            margin-bottom: 8px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1em;
+            font-weight: 300;
+        }
+
+        .content {
+            padding: 25px;
+        }
+
+        .form-section {
+            margin-bottom: 25px;
+        }
+
+        .form-section h2 {
+            color: #2d3748;
+            margin-bottom: 20px;
+            font-size: 1.2em;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+            align-items: end;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .input-group label {
+            font-weight: 600;
+            color: #4a5568;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+        }
+
+        .input-group input, .input-group select {
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 1em;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+            background: white;
+        }
+
+        .input-group input:focus, .input-group select:focus {
+            outline: none;
+            border-color: #4facfe;
+            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.1);
+        }
+
+        .time-section {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            margin-bottom: 20px;
+        }
+
+        .time-section label {
+            font-weight: 600;
+            color: #4a5568;
+            margin-bottom: 15px;
+            display: block;
+            font-size: 0.95em;
+        }
+
+        .time-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 12px;
+            align-items: end;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #4a5568;
+            border: 1px solid #cbd5e0;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-secondary:hover {
+            background: #cbd5e0;
+            transform: translateY(-1px);
+        }
+
+        .btn-remove {
+            background: #fed7d7;
+            color: #c53030;
+            border: 1px solid #feb2b2;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.8em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .btn-remove:hover {
+            background: #feb2b2;
+            transform: translateY(-1px);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 12px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.3s ease;
+            width: 100%;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .status-indicator.online {
+            background: #48bb78;
+        }
+
+        .status-indicator.offline {
+            background: #f56565;
+        }
+
+        .results-section {
+            margin-top: 20px;
+        }
+
+        .date-header {
+            text-align: center;
+            margin-bottom: 25px;
+            padding: 20px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border-radius: 12px;
+            color: white;
+        }
+
+        .date-header h2 {
+            font-size: 1.5em;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .data-info {
+            opacity: 0.9;
+            font-size: 0.9em;
+            margin: 0;
+        }
+
+        .highlights {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .highlight-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 4px solid;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            text-align: center;
+        }
+
+        .highlight-card.cheap {
+            border-left-color: #48bb78;
+        }
+
+        .highlight-card.expensive {
+            border-left-color: #f56565;
+        }
+
+        .highlight-card h3 {
+            font-size: 0.85em;
+            color: #718096;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+        }
+
+        .highlight-card .value {
+            font-size: 1.6em;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 5px;
+        }
+
+        .highlight-card .time {
+            font-size: 0.9em;
+            color: #4a5568;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            height: 300px;
+        }
+
+        .table-container {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px 8px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 0.9em;
+        }
+
+        th {
+            background: #f7fafc;
+            font-weight: 600;
+            color: #2d3748;
+            text-transform: uppercase;
+            font-size: 0.8em;
+            letter-spacing: 0.5px;
+        }
+
+        tr:hover {
+            background: #f7fafc;
+        }
+
+        .nt-row {
+            background: #ebf8ff !important;
+        }
+
+        .vt-row {
+            background: #fff5f5 !important;
+        }
+
+        .price-cell {
+            font-weight: 600;
+            font-size: 1em;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #718096;
+            font-size: 1.1em;
+        }
+
+        .error {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #f56565;
+        }
+
+        .warning {
+            background: #fef5e7;
+            color: #c05621;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #f6ad55;
+        }
+
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .main-container {
+                max-width: 100%;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+            
+            .header {
+                padding: 25px 20px;
+            }
+            
+            .header h1 {
+                font-size: 1.6em;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            
+            .highlights {
+                grid-template-columns: 1fr;
+            }
+            
+            .time-inputs {
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+            }
+            
+            .time-inputs .btn-remove {
+                grid-column: 1 / -1;
+                margin-top: 10px;
+                justify-self: start;
+                width: auto;
+            }
+            
+            .chart-container {
+                height: 250px;
+            }
+            
+            th, td {
+                padding: 8px 6px;
+                font-size: 0.85em;
+            }
+            
+            th {
+                font-size: 0.75em;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 1.4em;
+                flex-direction: column;
+                gap: 5px;
+            }
+            
+            .header p {
+                font-size: 0.9em;
+            }
+            
+            .content {
+                padding: 15px;
+            }
+            
+            .highlight-card .value {
+                font-size: 1.4em;
+            }
+            
+            th, td {
+                padding: 6px 4px;
+                font-size: 0.8em;
+            }
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+</head>
+<body>
+    <div class="main-container">
+        <div class="card">
+            <div class="header">
+                <h1>⚡ Kalkulačka cen elektřiny</h1>
+                <p>Spotové ceny + distribuce = celková cena za kWh</p>
+            </div>
+            
+            <div class="content">
+                <!-- Formulář -->
+                <div class="form-section">
+                    <h2>⚙️ Nastavení distribuce</h2>
+                    
+                    <div class="form-row">
+                        <div class="input-group">
+                            <label for="vtPrice">Distribuční cena VT (vysoký tarif)</label>
+                            <input type="number" id="vtPrice" step="0.01" value="2.50" placeholder="Kč/kWh">
+                        </div>
+                        <div class="input-group">
+                            <label for="ntPrice">Distribuční cena NT (nízký tarif)</label>
+                            <input type="number" id="ntPrice" step="0.01" value="1.20" placeholder="Kč/kWh">
+                        </div>
+                    </div>
+                    
+                    <div class="time-section">
+                        <label>Spínací časy NT (nízký tarif)</label>
+                        <div id="ntTimesContainer">
+                            <!-- NT časy se budou dynamicky přidávat zde -->
+                        </div>
+                        <button type="button" class="btn-secondary" onclick="addNtTime()">
+                            ➕ Přidat spínací čas NT
+                        </button>
+                    </div>
+                    
+                    <div class="form-group">
+                        <div class="input-group">
+                            <label for="selectedDate">Datum pro zobrazení cen</label>
+                            <select id="selectedDate">
+                                <option value="today">Dnes</option>
+                                <option value="tomorrow">Zítra</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <button class="btn-primary" onclick="loadData()">
+                        <span class="status-indicator" id="statusIndicator"></span>
+                        Načíst aktuální data
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Výsledky -->
+        <div class="card results-section" id="results" style="display: none;">
+            <!-- Datum -->
+            <div class="date-header">
+                <h2>📅 <span id="dataDate">-</span></h2>
+                <p class="data-info">Spotové ceny + distribuční poplatky</p>
+            </div>
+            
+            <div class="content">
+                <!-- Highlights -->
+                <div class="highlights">
+                    <div class="highlight-card cheap">
+                        <h3>Nejlevnější hodina</h3>
+                        <div class="value" id="cheapestPrice">-</div>
+                        <div class="time" id="cheapestTime">-</div>
+                    </div>
+                    <div class="highlight-card expensive">
+                        <h3>Nejdražší hodina</h3>
+                        <div class="value" id="expensivePrice">-</div>
+                        <div class="time" id="expensiveTime">-</div>
+                    </div>
+                </div>
+
+                <!-- Graf -->
+                <div class="chart-container">
+                    <canvas id="priceChart"></canvas>
+                </div>
+
+                <!-- Tabulka -->
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Čas</th>
+                                <th>Spot cena</th>
+                                <th>Tarif</th>
+                                <th>Distribuce</th>
+                                <th>Celkem</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dataTable">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading, Error & Warning states -->
+        <div class="card" id="loading" style="display: none;">
+            <div class="loading">
+                ⏳ Načítání dat...
+            </div>
+        </div>
+        
+        <div id="error" class="error" style="display: none;"></div>
+        <div id="warning" class="warning" style="display: none;"></div>
+    </div>
+
+    <script>
+        let priceChart = null;
+        let ntTimeCounter = 0;
+
+        // Přidání nového spínacího času NT
+        function addNtTime(start = "22:00", end = "06:00") {
+            const container = document.getElementById('ntTimesContainer');
+            const timeId = ++ntTimeCounter;
+            
+            const timeDiv = document.createElement('div');
+            timeDiv.className = 'time-inputs';
+            timeDiv.id = `ntTime-${timeId}`;
+            
+            timeDiv.innerHTML = `
+                <div class="input-group">
+                    <label>NT začátek</label>
+                    <input type="time" class="nt-start" value="${start}">
+                </div>
+                <div class="input-group">
+                    <label>NT konec</label>
+                    <input type="time" class="nt-end" value="${end}">
+                </div>
+                <div>
+                    <button type="button" class="btn-remove" onclick="removeNtTime(${timeId})">
+                        🗑️ Odebrat
+                    </button>
+                </div>
+            `;
+            
+            container.appendChild(timeDiv);
+        }
+
+        // Odebrání spínacího času NT
+        function removeNtTime(timeId) {
+            const element = document.getElementById(`ntTime-${timeId}`);
+            if (element) {
+                element.remove();
+            }
+            
+            // Pokud nezůstal žádný NT čas, přidáme výchozí
+            const container = document.getElementById('ntTimesContainer');
+            if (container.children.length === 0) {
+                addNtTime();
+            }
+        }
+
+        // Získání všech NT časů
+        function getNtTimes() {
+            const ntTimes = [];
+            const container = document.getElementById('ntTimesContainer');
+            
+            container.querySelectorAll('.time-inputs').forEach(timeDiv => {
+                const start = timeDiv.querySelector('.nt-start').value;
+                const end = timeDiv.querySelector('.nt-end').value;
+                if (start && end) {
+                    ntTimes.push({ start, end });
+                }
+            });
+            
+            return ntTimes;
+        }
+
+        // Inicializace dropdown s datumy
+        function initializeDateOptions() {
+            const today = new Date();
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            
+            const todayStr = today.toLocaleDateString('cs-CZ', { day: 'numeric', month: 'numeric', year: 'numeric' });
+            const tomorrowStr = tomorrow.toLocaleDateString('cs-CZ', { day: 'numeric', month: 'numeric', year: 'numeric' });
+            
+            const select = document.getElementById('selectedDate');
+            select.innerHTML = `
+                <option value="today">Dnes ${todayStr}</option>
+                <option value="tomorrow">Zítra ${tomorrowStr}</option>
+            `;
+        }
+
+        // Načtení uložených nastavení
+        function loadSettings() {
+            initializeDateOptions();
+            // Výchozí NT čas
+            addNtTime();
+        }
+
+        // Určení, zda je hodina v NT tarifu
+        function isNightTariff(hour) {
+            const ntTimes = getNtTimes();
+            
+            return ntTimes.some(ntTime => {
+                const ntStart = parseInt(ntTime.start.split(':')[0]);
+                const ntEnd = parseInt(ntTime.end.split(':')[0]);
+                
+                if (ntStart > ntEnd) { // přes půlnoc (22:00 - 06:00)
+                    return hour >= ntStart || hour < ntEnd;
+                } else { // normální rozmezí (18:00 - 20:00)
+                    return hour >= ntStart && hour < ntEnd;
+                }
+            });
+        }
+
+        // Načtení dat z API
+        async function loadData() {
+            const loading = document.getElementById('loading');
+            const error = document.getElementById('error');
+            const warning = document.getElementById('warning');
+            const results = document.getElementById('results');
+            const statusIndicator = document.getElementById('statusIndicator');
+            
+            loading.style.display = 'block';
+            error.style.display = 'none';
+            warning.style.display = 'none';
+            results.style.display = 'none';
+            statusIndicator.className = 'status-indicator';
+
+            const selectedDate = document.getElementById('selectedDate').value;
+
+            try {
+                const spotPrices = await fetchSpotPrices(selectedDate);
+                
+                // Kontrola, zda jsou data dostupná
+                if (spotPrices.length === 0 && selectedDate === 'tomorrow') {
+                    warning.innerHTML = `⚠️ <strong>Ceník na zítřek zatím nebyl publikován</strong><br>
+                        Spotové ceny na další den jsou obvykle zveřejněny kolem 12:30. 
+                        Zkuste to později nebo si zobrazte dnešní ceny.`;
+                    warning.style.display = 'block';
+                    statusIndicator.className = 'status-indicator offline';
+                    return;
+                }
+                
+                processData(spotPrices, selectedDate);
+                
+                statusIndicator.className = 'status-indicator online';
+                results.style.display = 'block';
+            } catch (err) {
+                console.error('Chyba při načítání dat:', err);
+                error.textContent = 'Chyba při načítání dat: ' + err.message;
+                error.style.display = 'block';
+                statusIndicator.className = 'status-indicator offline';
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        // Volání API serveru - Railway hosting
+        async function fetchSpotPrices(selectedDate) {
+            // URL vašeho Railway serveru - nahraďte po nasazení
+            const API_BASE = 'https://your-app-name.railway.app'; // ← Zde bude vaše Railway URL
+            
+            try {
+                // Zkusíme volat Railway server
+                const response = await fetch(`${API_BASE}/api/spot-prices/${selectedDate}`);
+                
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                
+                if (!result.success) {
+                    throw new Error(result.message || 'Server vrátil chybu');
+                }
+                
+                return result.data;
+                
+            } catch (err) {
+                console.warn('Nelze se připojit k serveru:', err.message);
+                
+                // Místo demo dat vracíme NULL hodnoty
+                return generateNullData();
+            }
+        }
+
+        // Generuje data s NULL hodnotami pro zobrazení chyby
+        function generateNullData() {
+            return Array.from({length: 24}, (_, hour) => {
+                return {
+                    hour: hour,
+                    spotPrice: null  // NULL hodnota značí nedostupnost dat
+                };
+            });
+        }
+
+        // Zpracování a zobrazení dat
+        function processData(spotPrices, selectedDate) {
+            const vtPrice = parseFloat(document.getElementById('vtPrice').value);
+            const ntPrice = parseFloat(document.getElementById('ntPrice').value);
+            
+            // Kontrola, jestli máme NULL data (server nedostupný)
+            const hasNullData = spotPrices.some(item => item.spotPrice === null);
+            
+            if (hasNullData) {
+                // Zobrazíme varování o nedostupnosti serveru
+                const warning = document.getElementById('warning');
+                warning.innerHTML = `⚠️ <strong>Python server není spuštěný</strong><br>
+                    Spotové ceny nejsou dostupné. Pro získání skutečných dat spusťte Python server příkazem:<br>
+                    <code style="background: #f1f1f1; padding: 4px 8px; border-radius: 4px; font-family: monospace;">python server.py</code>`;
+                warning.style.display = 'block';
+                
+                // Přesto zobrazíme tabulku s NULL hodnotami
+            }
+            
+            // Aktualizace data
+            const targetDate = selectedDate === 'tomorrow' 
+                ? new Date(Date.now() + 24 * 60 * 60 * 1000)
+                : new Date();
+            
+            const dateStr = targetDate.toLocaleDateString('cs-CZ', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            document.getElementById('dataDate').textContent = dateStr;
+            
+            const processedData = spotPrices.map(item => {
+                const isNT = isNightTariff(item.hour);
+                const distributionPrice = isNT ? ntPrice : vtPrice;
+                
+                // Pokud jsou spotové ceny NULL, celková cena bude také NULL
+                const totalPrice = item.spotPrice !== null ? item.spotPrice + distributionPrice : null;
+                
+                return {
+                    hour: item.hour,
+                    spotPrice: item.spotPrice,
+                    distributionPrice: distributionPrice,
+                    totalPrice: totalPrice,
+                    tariff: isNT ? 'NT' : 'VT',
+                    isNT: isNT
+                };
+            });
+
+            updateHighlights(processedData, hasNullData);
+            updateChart(processedData, hasNullData);
+            updateTable(processedData, hasNullData);
+        }
+
+        // Aktualizace highlights
+        function updateHighlights(data, hasNullData) {
+            if (hasNullData) {
+                document.getElementById('cheapestPrice').textContent = '- Kč/kWh';
+                document.getElementById('cheapestTime').textContent = 'Data nedostupná';
+                
+                document.getElementById('expensivePrice').textContent = '- Kč/kWh';
+                document.getElementById('expensiveTime').textContent = 'Data nedostupná';
+                return;
+            }
+
+            const validData = data.filter(item => item.totalPrice !== null);
+            const sorted = [...validData].sort((a, b) => a.totalPrice - b.totalPrice);
+            const cheapest = sorted[0];
+            const expensive = sorted[sorted.length - 1];
+
+            document.getElementById('cheapestPrice').textContent = cheapest.totalPrice.toFixed(2) + ' Kč/kWh';
+            document.getElementById('cheapestTime').textContent = `${cheapest.hour}:00-${cheapest.hour + 1}:00`;
+            
+            document.getElementById('expensivePrice').textContent = expensive.totalPrice.toFixed(2) + ' Kč/kWh';
+            document.getElementById('expensiveTime').textContent = `${expensive.hour}:00-${expensive.hour + 1}:00`;
+        }
+
+        // Aktualizace grafu
+        function updateChart(data, hasNullData) {
+            const ctx = document.getElementById('priceChart').getContext('2d');
+            
+            if (priceChart) {
+                priceChart.destroy();
+            }
+
+            if (hasNullData) {
+                // Zobrazíme prázdný graf s informací o nedostupnosti dat
+                priceChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.map(item => `${item.hour}:00`),
+                        datasets: [{
+                            label: 'Data nedostupná',
+                            data: [],
+                            borderColor: '#cbd5e0',
+                            backgroundColor: 'transparent',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 10,
+                                title: {
+                                    display: true,
+                                    text: 'Cena (Kč/kWh) - Python server není spuštěný'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Hodina'
+                                }
+                            }
+                        }
+                    }
+                });
+                return;
+            }
+
+            const validData = data.filter(item => item.totalPrice !== null);
+            const colors = validData.map(item => item.isNT ? '#3182ce' : '#e53e3e');
+            
+            priceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: validData.map(item => `${item.hour}:00`),
+                    datasets: [{
+                        label: 'Celková cena (Kč/kWh)',
+                        data: validData.map(item => item.totalPrice),
+                        borderColor: '#667eea',
+                        backgroundColor: colors.map(color => color + '20'),
+                        pointBackgroundColor: colors,
+                        borderWidth: 3,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            min: function(context) {
+                                // Najdeme minimální hodnotu v datech
+                                const data = context.chart.data.datasets[0].data;
+                                if (data.length === 0) return 0;
+                                const minValue = Math.min(...data);
+                                // Pokud je minimální hodnota záporná, nastavíme dolní mez o něco níže
+                                return minValue < 0 ? Math.floor(minValue) - 0.5 : 0;
+                            },
+                            title: {
+                                display: true,
+                                text: 'Cena (Kč/kWh)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Hodina'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Aktualizace tabulky
+        function updateTable(data, hasNullData) {
+            const tbody = document.getElementById('dataTable');
+            tbody.innerHTML = '';
+
+            data.forEach(item => {
+                const row = tbody.insertRow();
+                row.className = item.isNT ? 'nt-row' : 'vt-row';
+                
+                // Zobrazení aktivních NT časů pro NT hodiny
+                let tariffDisplay = item.tariff;
+                if (item.isNT) {
+                    const activeNtTimes = getNtTimes().filter(ntTime => {
+                        const ntStart = parseInt(ntTime.start.split(':')[0]);
+                        const ntEnd = parseInt(ntTime.end.split(':')[0]);
+                        
+                        if (ntStart > ntEnd) {
+                            return item.hour >= ntStart || item.hour < ntEnd;
+                        } else {
+                            return item.hour >= ntStart && item.hour < ntEnd;
+                        }
+                    });
+                    
+                    if (activeNtTimes.length > 0) {
+                        const timeRanges = activeNtTimes.map(t => `${t.start}-${t.end}`).join(', ');
+                        tariffDisplay = `NT (${timeRanges})`;
+                    }
+                }
+                
+                // Formátování hodnot - zobrazíme "- Kč" pro NULL hodnoty
+                const spotPriceDisplay = item.spotPrice !== null ? `${item.spotPrice.toFixed(2)} Kč` : '- Kč';
+                const totalPriceDisplay = item.totalPrice !== null ? `${item.totalPrice.toFixed(2)} Kč` : '- Kč';
+                
+                row.innerHTML = `
+                    <td>${item.hour}:00-${item.hour + 1}:00</td>
+                    <td>${spotPriceDisplay}</td>
+                    <td>${tariffDisplay}</td>
+                    <td>${item.distributionPrice.toFixed(2)} Kč</td>
+                    <td class="price-cell">${totalPriceDisplay}</td>
+                `;
+            });
+        }
+
+        // Inicializace
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSettings();
+        });
+    </script>
+</body>
+</html>
