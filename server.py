@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-Debug verze serveru - ukáže přesný formát dat z API
+Proxy server pro stahování spotových cen elektřiny z OTE
+Řeší CORS problémy pro webovou aplikaci
 """
 
 import json
@@ -9,9 +10,10 @@ from datetime import datetime, date, timedelta
 from flask import Flask, jsonify, send_from_directory
 from flask_cors import CORS
 import os
+import sys
 
 app = Flask(__name__)
-CORS(app)
+CORS(app)  # Povolí CORS pro všechny domény
 
 # API endpoints
 SPOTOVA_ELEKTRINA_API = "https://spotovaelektrina.cz/api/v1/price/get-prices-json"
@@ -21,40 +23,22 @@ def serve_app():
     """Servíruje hlavní HTML aplikaci"""
     return send_from_directory('.', 'index.html')
 
-@app.route('/api/debug-api')
-def debug_api():
-    """Debug endpoint - ukáže co API vrací"""
-    try:
-        response = requests.get(SPOTOVA_ELEKTRINA_API, timeout=15)
-        response.raise_for_status()
-        
-        data = response.json()
-        
-        return jsonify({
-            'success': True,
-            'raw_response': data,
-            'type': str(type(data)),
-            'length': len(data) if hasattr(data, '__len__') else 'N/A',
-            'first_item': data[0] if isinstance(data, list) and len(data) > 0 else None,
-            'first_item_type': str(type(data[0])) if isinstance(data, list) and len(data) > 0 else None,
-            'keys': list(data.keys()) if isinstance(data, dict) else None
-        })
-        
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e),
-            'error_type': str(type(e))
-        }), 500
-
 @app.route('/api/spot-prices')
 @app.route('/api/spot-prices/<date_param>')
 def get_spot_prices(date_param='today'):
     """
-    Stáhne spotové ceny - s debug výpisy
+    Stáhne spotové ceny z spotovaelektrina.cz
+    Parametry:
+    - today: dnešní ceny
+    - tomorrow: zítřejší ceny
     """
     try:
-        print(f"=== DEBUG: Stahování dat pro: {date_param} ===")
+        print(f"Stahování dat pro: {date_param}")
+        response = requests.get(SPOTOVA_ELEKTRINA_API, timeout=10)
+        response.raise_for_status()
+        
+        data = response.json()
+        print(f"API odpověď: {type(data)}, klíče: {list(data.keys()) if isinstance(data, dict) else 'není dict'}")
         
         # Určení cílového data
         if date_param == 'tomorrow':
@@ -62,107 +46,125 @@ def get_spot_prices(date_param='today'):
         else:
             target_date = date.today().isoformat()
         
-        print(f"Cílové datum: {target_date}")
-        
-        response = requests.get(SPOTOVA_ELEKTRINA_API, timeout=15)
-        response.raise_for_status()
-        
-        data = response.json()
-        
-        print(f"=== RAW API RESPONSE ===")
-        print(f"Typ dat: {type(data)}")
-        print(f"Délka: {len(data) if hasattr(data, '__len__') else 'N/A'}")
-        
-        if isinstance(data, list):
-            print(f"Je to list s {len(data)} položkami")
-            if len(data) > 0:
-                print(f"První položka: {data[0]}")
-                print(f"Typ první položky: {type(data[0])}")
-        elif isinstance(data, dict):
-            print(f"Je to dict s klíči: {list(data.keys())}")
-        else:
-            print(f"Neočekávaný typ: {type(data)}")
-            
-        print(f"Celá odpověď (prvních 500 znaků): {json.dumps(data, indent=2, ensure_ascii=False)[:500]}...")
-        print("=== KONEC RAW RESPONSE ===")
-        
-        # Zpracování dat
+        # Zpracování dat podle skutečného formátu API
         processed_data = []
         
-        # Pokusíme se zpracovat různé možné formáty
-        if isinstance(data, list):
-            for i, item in enumerate(data):
-                print(f"Zpracovávám položku {i}: {item} (typ: {type(item)})")
-                
-                if isinstance(item, dict):
-                    # Standardní formát
-                    item_date = item.get('date', '')
-                    if item_date == target_date:
-                        hour = item.get('hour', 0)
-                        price_czk = item.get('price_czk', 0)
-                        
-                        processed_data.append({
-                            'hour': hour,
-                            'spotPrice': round(price_czk / 1000, 3),
-                            'timestamp': f"{target_date}T{hour:02d}:00:00Z"
-                        })
-                elif isinstance(item, str):
-                    # Možná jsou data jako string JSON?
-                    try:
-                        parsed_item = json.loads(item)
-                        print(f"Parsovaná položka: {parsed_item}")
-                        # Pak stejné zpracování...
-                    except:
-                        print(f"Nelze parsovat string jako JSON: {item}")
-                else:
-                    print(f"Neznámý typ položky: {type(item)}")
-        
-        elif isinstance(data, dict):
-            # Možná je struktura jiná
-            if 'prices' in data:
-                prices = data['prices']
-                print(f"Našel jsem 'prices' klíč s daty: {type(prices)}")
-            elif 'data' in data:
-                prices = data['data']
-                print(f"Našel jsem 'data' klíč s daty: {type(prices)}")
+        if isinstance(data, dict):
+            # Vybereme správnou datovou sadu podle parametru
+            if date_param == 'tomorrow' and 'hoursTomorrow' in data:
+                hours_data = data['hoursTomorrow']
+                print(f"Používám hoursTomorrow: {len(hours_data)} hodin")
+            elif 'hoursToday' in data:
+                hours_data = data['hoursToday'] 
+                print(f"Používám hoursToday: {len(hours_data)} hodin")
             else:
-                print(f"Dict nemá očekávané klíče, má: {list(data.keys())}")
-                prices = data
+                print("Neznámý formát dat z API")
+                hours_data = []
             
-            # Pokračujeme ve zpracování...
+            # Zpracování hodinových dat
+            for item in hours_data:
+                hour = item.get('hour', 0)
+                price_czk = item.get('priceCZK', 0)  # Pozor: priceCZK, ne price_czk!
+                
+                processed_data.append({
+                    'hour': hour,
+                    'spotPrice': round(price_czk / 1000, 2),  # převod z Kč/MWh na Kč/kWh
+                    'timestamp': f"{target_date}T{hour:02d}:00:00Z"
+                })
         
-        print(f"Zpracováno {len(processed_data)} položek")
-        
-        # Pokud nemáme data, použijeme demo
+        # Pokud nemáme data pro požadované datum
         if len(processed_data) == 0:
-            print("Žádná data nezpracována, generuji demo data")
-            processed_data = generate_demo_data()
-            source = 'demo_data'
-        else:
-            source = 'spotovaelektrina.cz'
+            if date_param == 'tomorrow':
+                print("Žádná data pro zítřek - pravděpodobně ještě nebyla publikována")
+                return jsonify({
+                    'success': True,
+                    'data': [],
+                    'message': 'Ceny na zítřek zatím nebyly publikovány',
+                    'timestamp': datetime.now().isoformat(),
+                    'source': 'spotovaelektrina.cz',
+                    'date': target_date
+                })
+            else:
+                print("Žádná data pro dnes, generuji demo data...")
+                processed_data = generate_demo_data()
         
+        # Seřadíme podle hodin
         processed_data.sort(key=lambda x: x['hour'])
         
         return jsonify({
             'success': True,
             'data': processed_data,
             'timestamp': datetime.now().isoformat(),
-            'source': source,
+            'source': 'spotovaelektrina.cz',
             'date': target_date
         })
         
-    except Exception as e:
-        print(f"CHYBA: {e}")
-        print(f"Typ chyby: {type(e)}")
+    except requests.RequestException as e:
+        print(f"Chyba při stahování dat: {e}")
         
-        # Vždy vrátíme demo data při chybě
+        # Pro zítřek nebudeme generovat demo data pokud služba nefunguje
+        if date_param == 'tomorrow':
+            return jsonify({
+                'success': False,
+                'data': [],
+                'message': 'Služba není dostupná a zítřejší ceny nejsou k dispozici',
+                'error': str(e),
+                'timestamp': datetime.now().isoformat()
+            }), 503
+        
+        # Pro dnes vygenerujeme demo data
         return jsonify({
             'success': True,
             'data': generate_demo_data(),
             'timestamp': datetime.now().isoformat(),
-            'source': 'demo_data',
-            'error_fallback': str(e)
+            'source': 'demo_data'
         })
+    
+    except Exception as e:
+        print(f"Neočekávaná chyba: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }), 500
+
+@app.route('/api/debug-api')
+def debug_api():
+    """Debug endpoint pro kontrolu API odpovědi"""
+    try:
+        response = requests.get(SPOTOVA_ELEKTRINA_API, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        
+        # Základní info o odpovědi
+        debug_info = {
+            'success': True,
+            'type': str(type(data)),
+            'length': len(data) if hasattr(data, '__len__') else 'N/A'
+        }
+        
+        if isinstance(data, dict):
+            debug_info['keys'] = list(data.keys())
+            if 'hoursToday' in data:
+                debug_info['hoursToday_length'] = len(data['hoursToday'])
+                debug_info['first_today'] = data['hoursToday'][0] if data['hoursToday'] else None
+            if 'hoursTomorrow' in data:
+                debug_info['hoursTomorrow_length'] = len(data['hoursTomorrow'])
+                debug_info['first_tomorrow'] = data['hoursTomorrow'][0] if data['hoursTomorrow'] else None
+        elif isinstance(data, list):
+            debug_info['first_item'] = data[0] if data else None
+            debug_info['first_item_type'] = str(type(data[0])) if data else None
+        
+        debug_info['raw_response'] = data
+        
+        return jsonify(debug_info)
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }), 500
 
 def generate_demo_data():
     """Generuje demo data s realistickými cenami"""
@@ -170,15 +172,16 @@ def generate_demo_data():
     
     demo_data = []
     for hour in range(24):
-        if 1 <= hour <= 5:
+        # Realistické ceny podle denního profilu
+        if 1 <= hour <= 5:  # Noční minimum
             base_price = 1.8 + random.uniform(0, 0.5)
-        elif 7 <= hour <= 9:
+        elif 7 <= hour <= 9:  # Ranní špička
             base_price = 4.2 + random.uniform(0, 1.0)
-        elif 10 <= hour <= 16:
+        elif 10 <= hour <= 16:  # Den
             base_price = 3.2 + random.uniform(0, 0.8)
-        elif 17 <= hour <= 20:
+        elif 17 <= hour <= 20:  # Večerní špička
             base_price = 4.8 + random.uniform(0, 1.2)
-        else:
+        else:  # Ostatní časy
             base_price = 2.5 + random.uniform(0, 0.8)
         
         demo_data.append({
@@ -199,5 +202,21 @@ def health_check():
     })
 
 if __name__ == '__main__':
+    # Pro lokální vývoj
     port = int(os.environ.get('PORT', 3000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    
+    print("=" * 50)
+    print("🚀 PROXY SERVER PRO SPOTOVÉ CENY ELEKTŘINY")
+    print("=" * 50)
+    print(f"📍 Server běží na portu: {port}")
+    print("=" * 50)
+    
+    app.run(
+        host='0.0.0.0',
+        port=port,
+        debug=False
+    )
+else:
+    # Pro produkční nasazení (gunicorn)
+    # Žádná dodatečná konfigurace není potřeba
+    pass
