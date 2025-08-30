@@ -34,11 +34,6 @@ def get_spot_prices(date_param='today'):
     """
     try:
         print(f"Stahování dat pro: {date_param}")
-        response = requests.get(SPOTOVA_ELEKTRINA_API, timeout=10)
-        response.raise_for_status()
-        
-        data = response.json()
-        print(f"Načteno {len(data)} hodinových cen")
         
         # Určení cílového data
         if date_param == 'tomorrow':
@@ -46,21 +41,66 @@ def get_spot_prices(date_param='today'):
         else:
             target_date = date.today().isoformat()
         
+        print(f"Cílové datum: {target_date}")
+        
+        response = requests.get(SPOTOVA_ELEKTRINA_API, timeout=15)
+        response.raise_for_status()
+        
+        data = response.json()
+        print(f"API odpověď typ: {type(data)}")
+        print(f"API odpověď délka: {len(data) if isinstance(data, list) else 'není list'}")
+        
+        # Debug: podívejme se na strukturu dat
+        if data and len(data) > 0:
+            print(f"První položka: {data[0]}")
+            print(f"Typ první položky: {type(data[0])}")
+        
         # Zpracování dat do jednotného formátu
         processed_data = []
         
-        for item in data:
-            # API vrací data v různých formátech, musíme standardizovat
-            item_date = item.get('date', '')
-            if item_date == target_date:
-                hour = item.get('hour', 0)
-                price_czk = item.get('price_czk', 0)
-                
-                processed_data.append({
-                    'hour': hour,
-                    'spotPrice': round(price_czk / 1000, 3),  # převod z Kč/MWh na Kč/kWh
-                    'timestamp': f"{target_date}T{hour:02d}:00:00Z"
-                })
+        # Kontrola, jestli je data list nebo dict
+        if isinstance(data, list):
+            # Data jsou list objektů
+            for item in data:
+                if isinstance(item, dict):
+                    item_date = item.get('date', '')
+                    if item_date == target_date:
+                        hour = item.get('hour', 0)
+                        price_czk = item.get('price_czk', 0)
+                        
+                        processed_data.append({
+                            'hour': hour,
+                            'spotPrice': round(price_czk / 1000, 3),  # převod z Kč/MWh na Kč/kWh
+                            'timestamp': f"{target_date}T{hour:02d}:00:00Z"
+                        })
+                else:
+                    print(f"Neočekávaný typ položky: {type(item)}, hodnota: {item}")
+        
+        elif isinstance(data, dict):
+            # Data jsou dictionary - možná jiná struktura
+            print(f"Data jsou dict s klíči: {data.keys()}")
+            
+            # Zkusíme různé možné struktury
+            if 'data' in data:
+                actual_data = data['data']
+                if isinstance(actual_data, list):
+                    for item in actual_data:
+                        if isinstance(item, dict):
+                            item_date = item.get('date', '')
+                            if item_date == target_date:
+                                hour = item.get('hour', 0)
+                                price_czk = item.get('price_czk', 0)
+                                
+                                processed_data.append({
+                                    'hour': hour,
+                                    'spotPrice': round(price_czk / 1000, 3),
+                                    'timestamp': f"{target_date}T{hour:02d}:00:00Z"
+                                })
+        else:
+            print(f"Neočekávaný typ dat z API: {type(data)}")
+            raise ValueError(f"API vrátilo neočekávaný typ dat: {type(data)}")
+        
+        print(f"Zpracováno {len(processed_data)} položek pro datum {target_date}")
         
         # Pokud nemáme data pro požadované datum
         if len(processed_data) == 0:
@@ -112,6 +152,17 @@ def get_spot_prices(date_param='today'):
     
     except Exception as e:
         print(f"Neočekávaná chyba: {e}")
+        print(f"Typ chyby: {type(e)}")
+        
+        # Fallback na demo data pro today
+        if date_param != 'tomorrow':
+            return jsonify({
+                'success': True,
+                'data': generate_demo_data(),
+                'timestamp': datetime.now().isoformat(),
+                'source': 'demo_data'
+            })
+        
         return jsonify({
             'success': False,
             'error': str(e),
@@ -168,7 +219,3 @@ if __name__ == '__main__':
         port=port,
         debug=False
     )
-else:
-    # Pro produkční nasazení (gunicorn)
-    # Žádná dodatečná konfigurace není potřeba
-    pass
