@@ -74,19 +74,15 @@ def get_spot_prices(date_param='today'):
         
         # Pokud nemáme data pro požadované datum
         if len(processed_data) == 0:
-            if date_param == 'tomorrow':
-                print("Žádná data pro zítřek - pravděpodobně ještě nebyla publikována")
-                return jsonify({
-                    'success': True,
-                    'data': [],
-                    'message': 'Ceny na zítřek zatím nebyly publikovány',
-                    'timestamp': datetime.now().isoformat(),
-                    'source': 'spotovaelektrina.cz',
-                    'date': target_date
-                })
-            else:
-                print("Žádná data pro dnes, generuji demo data...")
-                processed_data = generate_demo_data()
+            print(f"Žádná data pro {date_param}")
+            return jsonify({
+                'success': True,
+                'data': [],
+                'message': f'Data pro {date_param} nejsou k dispozici',
+                'timestamp': datetime.now().isoformat(),
+                'source': 'spotovaelektrina.cz',
+                'date': target_date
+            })
         
         # Seřadíme podle hodin
         processed_data.sort(key=lambda x: x['hour'])
@@ -102,23 +98,13 @@ def get_spot_prices(date_param='today'):
     except requests.RequestException as e:
         print(f"Chyba při stahování dat: {e}")
         
-        # Pro zítřek nebudeme generovat demo data pokud služba nefunguje
-        if date_param == 'tomorrow':
-            return jsonify({
-                'success': False,
-                'data': [],
-                'message': 'Služba není dostupná a zítřejší ceny nejsou k dispozici',
-                'error': str(e),
-                'timestamp': datetime.now().isoformat()
-            }), 503
-        
-        # Pro dnes vygenerujeme demo data
         return jsonify({
-            'success': True,
-            'data': generate_demo_data(),
-            'timestamp': datetime.now().isoformat(),
-            'source': 'demo_data'
-        })
+            'success': False,
+            'data': [],
+            'message': 'Služba není dostupná',
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }), 503
     
     except Exception as e:
         print(f"Neočekávaná chyba: {e}")
