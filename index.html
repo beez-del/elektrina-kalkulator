@@ -720,7 +720,7 @@
         // Volání API serveru - Railway hosting
         async function fetchSpotPrices(selectedDate) {
             // URL vašeho Railway serveru - nahraďte po nasazení
-            const API_BASE = 'https://elektrina-kalkulator.onrender.com'; // ← Zde bude vaše Render URL
+            const API_BASE = 'https://your-app-name.railway.app'; // ← Zde bude vaše Railway URL
             
             try {
                 // Zkusíme volat Railway server
@@ -844,15 +844,15 @@
             if (hasNullData) {
                 // Zobrazíme prázdný graf s informací o nedostupnosti dat
                 priceChart = new Chart(ctx, {
-                type: 'bar',
+                    type: 'line',
                     data: {
-                    labels: validData.map(item => `${item.hour}:00`),
-                    datasets: [{
-                            label: 'Celková cena (Kč/kWh)',
-                            data: validData.map(item => item.totalPrice),
-                            backgroundColor: colors.map(color => color + '80'),
-                            borderColor: colors,
-                            borderWidth: 2
+                        labels: data.map(item => `${item.hour}:00`),
+                        datasets: [{
+                            label: 'Data nedostupná',
+                            data: [],
+                            borderColor: '#cbd5e0',
+                            backgroundColor: 'transparent',
+                            borderWidth: 1
                         }]
                     },
                     options: {
@@ -888,15 +888,19 @@
             const colors = validData.map(item => item.isNT ? '#3182ce' : '#e53e3e');
             
             priceChart = new Chart(ctx, {
-                type: 'bar',
+                type: 'line',
                 data: {
                     labels: validData.map(item => `${item.hour}:00`),
                     datasets: [{
                         label: 'Celková cena (Kč/kWh)',
                         data: validData.map(item => item.totalPrice),
-                        backgroundColor: colors.map(color => color + '80'),
-                        borderColor: colors,
-                        borderWidth: 2
+                        borderColor: '#667eea',
+                        backgroundColor: colors.map(color => color + '20'),
+                        pointBackgroundColor: colors,
+                        borderWidth: 3,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        tension: 0.1
                     }]
                 },
                 options: {
