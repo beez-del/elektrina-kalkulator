@@ -844,15 +844,15 @@
             if (hasNullData) {
                 // Zobrazíme prázdný graf s informací o nedostupnosti dat
                 priceChart = new Chart(ctx, {
-                    type: 'line',
+                type: 'bar',
                     data: {
-                        labels: data.map(item => `${item.hour}:00`),
+                        labels: validData.map(item => item.hour),
                         datasets: [{
-                            label: 'Data nedostupná',
-                            data: [],
-                            borderColor: '#cbd5e0',
-                            backgroundColor: 'transparent',
-                            borderWidth: 1
+                            label: 'Celková cena (Kč/kWh)',
+                            data: validData.map(item => item.totalPrice),
+                            backgroundColor: colors.map(color => color + '80'),
+                            borderColor: colors,
+                            borderWidth: 2
                         }]
                     },
                     options: {
