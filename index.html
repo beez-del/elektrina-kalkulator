@@ -843,16 +843,16 @@
 
             if (hasNullData) {
                 // Zobrazíme prázdný graf s informací o nedostupnosti dat
-                priceChart = new Chart(ctx, {
-                    type: 'bar',
+               priceChart = new Chart(ctx, {
+                    type: 'line',
                     data: {
-                        labels: validData.map(item => item.hour),
+                        labels: data.map(item => `${item.hour}:00`),
                         datasets: [{
-                            label: 'Celková cena (Kč/kWh)',
-                            data: validData.map(item => item.totalPrice),
-                            backgroundColor: colors.map(color => color + '80'),
-                            borderColor: colors,
-                            borderWidth: 2
+                            label: 'Data nedostupná',
+                            data: [],
+                            borderColor: '#cbd5e0',
+                            backgroundColor: 'transparent',
+                            borderWidth: 1
                         }]
                     },
                         options: {
@@ -888,19 +888,15 @@
             const colors = validData.map(item => item.isNT ? '#3182ce' : '#e53e3e');
             
             priceChart = new Chart(ctx, {
-                type: 'line',
+                type: 'bar',
                 data: {
-                    labels: validData.map(item => `${item.hour}:00`),
+                    labels: validData.map(item => item.hour),
                     datasets: [{
                         label: 'Celková cena (Kč/kWh)',
                         data: validData.map(item => item.totalPrice),
-                        borderColor: '#667eea',
-                        backgroundColor: colors.map(color => color + '20'),
-                        pointBackgroundColor: colors,
-                        borderWidth: 3,
-                        pointRadius: 4,
-                        pointHoverRadius: 6,
-                        tension: 0.1
+                        backgroundColor: colors.map(color => color + '80'),
+                        borderColor: colors,
+                        borderWidth: 2
                     }]
                 },
                 options: {
