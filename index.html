@@ -846,8 +846,8 @@
                 priceChart = new Chart(ctx, {
                 type: 'bar',
                     data: {
-                        labels: validData.map(item => item.hour),
-                        datasets: [{
+                    labels: validData.map(item => `${item.hour}:00`),
+                    datasets: [{
                             label: 'Celková cena (Kč/kWh)',
                             data: validData.map(item => item.totalPrice),
                             backgroundColor: colors.map(color => color + '80'),
