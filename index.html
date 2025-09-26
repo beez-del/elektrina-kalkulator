@@ -577,6 +577,62 @@
         let priceChart = null;
         let ntTimeCounter = 0;
 
+        // Ukládání nastavení do localStorage
+        function saveSettings() {
+            const settings = {
+                vtPrice: document.getElementById('vtPrice').value,
+                ntPrice: document.getElementById('ntPrice').value,
+                ntTimes: getNtTimes(),
+                selectedDate: document.getElementById('selectedDate').value
+            };
+            
+            localStorage.setItem('electricity-calculator-settings', JSON.stringify(settings));
+        }
+
+        // Načítání nastavení z localStorage
+        function loadStoredSettings() {
+            try {
+                const storedSettings = localStorage.getItem('electricity-calculator-settings');
+                if (storedSettings) {
+                    const settings = JSON.parse(storedSettings);
+                    
+                    // Načtení distribučních cen
+                    if (settings.vtPrice) {
+                        document.getElementById('vtPrice').value = settings.vtPrice;
+                    }
+                    if (settings.ntPrice) {
+                        document.getElementById('ntPrice').value = settings.ntPrice;
+                    }
+                    
+                    // Načtení vybraného data
+                    if (settings.selectedDate) {
+                        document.getElementById('selectedDate').value = settings.selectedDate;
+                    }
+                    
+                    // Vymazání existujících NT časů
+                    const container = document.getElementById('ntTimesContainer');
+                    container.innerHTML = '';
+                    ntTimeCounter = 0;
+                    
+                    // Načtení NT časů
+                    if (settings.ntTimes && settings.ntTimes.length > 0) {
+                        settings.ntTimes.forEach(ntTime => {
+                            addNtTime(ntTime.start, ntTime.end);
+                        });
+                    } else {
+                        // Pokud nejsou uložené žádné NT časy, přidáme výchozí
+                        addNtTime();
+                    }
+                    
+                    return true;
+                }
+            } catch (error) {
+                console.error('Chyba při načítání nastavení:', error);
+            }
+            
+            return false;
+        }
+
         // Přidání nového spínacího času NT
         function addNtTime(start = "22:00", end = "06:00") {
             const container = document.getElementById('ntTimesContainer');
@@ -589,11 +645,11 @@
             timeDiv.innerHTML = `
                 <div class="input-group">
                     <label>NT začátek</label>
-                    <input type="time" class="nt-start" value="${start}">
+                    <input type="time" class="nt-start" value="${start}" onchange="saveSettings()">
                 </div>
                 <div class="input-group">
                     <label>NT konec</label>
-                    <input type="time" class="nt-end" value="${end}">
+                    <input type="time" class="nt-end" value="${end}" onchange="saveSettings()">
                 </div>
                 <div>
                     <button type="button" class="btn-remove" onclick="removeNtTime(${timeId})">
@@ -603,6 +659,9 @@
             `;
             
             container.appendChild(timeDiv);
+            
+            // Uložení nastavení po přidání nového času
+            saveSettings();
         }
 
         // Odebrání spínacího času NT
@@ -617,6 +676,9 @@
             if (container.children.length === 0) {
                 addNtTime();
             }
+            
+            // Uložení nastavení po odebrání času
+            saveSettings();
         }
 
         // Získání všech NT časů
@@ -654,8 +716,19 @@
         // Načtení uložených nastavení
         function loadSettings() {
             initializeDateOptions();
-            // Výchozí NT čas
-            addNtTime();
+            
+            // Pokusíme se načíst uložené nastavení
+            const settingsLoaded = loadStoredSettings();
+            
+            // Pokud se nepodařilo načíst nastavení, přidáme výchozí NT čas
+            if (!settingsLoaded) {
+                addNtTime();
+            }
+            
+            // Přidání event listenerů pro automatické ukládání
+            document.getElementById('vtPrice').addEventListener('change', saveSettings);
+            document.getElementById('ntPrice').addEventListener('change', saveSettings);
+            document.getElementById('selectedDate').addEventListener('change', saveSettings);
         }
 
         // Určení, zda je hodina v NT tarifu
@@ -834,133 +907,132 @@
         }
 
         // Aktualizace grafu
-// Aktualizace grafu
-function updateChart(data, hasNullData) {
-    const ctx = document.getElementById('priceChart').getContext('2d');
-    
-    if (priceChart) {
-        priceChart.destroy();
-    }
+        function updateChart(data, hasNullData) {
+            const ctx = document.getElementById('priceChart').getContext('2d');
+            
+            if (priceChart) {
+                priceChart.destroy();
+            }
 
-    if (hasNullData) {
-        // Zobrazíme prázdný graf s informací o nedostupnosti dat
-       priceChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: data.map(item => `${item.hour}:00`),
-                datasets: [{
-                    label: 'Data nedostupná',
-                    data: [],
-                    borderColor: '#cbd5e0',
-                    backgroundColor: 'transparent',
-                    borderWidth: 1
-                }]
-            },
+            if (hasNullData) {
+                // Zobrazíme prázdný graf s informací o nedostupnosti dat
+               priceChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.map(item => `${item.hour}:00`),
+                        datasets: [{
+                            label: 'Data nedostupná',
+                            data: [],
+                            borderColor: '#cbd5e0',
+                            backgroundColor: 'transparent',
+                            borderWidth: 1
+                        }]
+                    },
+                        options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 10,
+                                title: {
+                                    display: true,
+                                    text: 'Cena (Kč/kWh) - Python server není spuštěný'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Hodina'
+                                }
+                            }
+                        }
+                    }
+                });
+                return;
+            }
+
+            const validData = data.filter(item => item.totalPrice !== null);
+            const colors = validData.map(item => item.isNT ? '#3182ce' : '#e53e3e');
+            
+            // Plugin pro vykreslení vertikální čáry pro poledne
+            const verticalLinePlugin = {
+                id: 'verticalLine',
+                afterDraw: (chart) => {
+                    const ctx = chart.ctx;
+                    const chartArea = chart.chartArea;
+                    
+                    // Najdeme pozici pro vyznačení poledne (mezi 11 a 12)
+                    const xScale = chart.scales.x;
+                    const linePosition = xScale.getPixelForValue(11.5); // Poledne - mezi 11:00 a 12:00
+                    
+                    if (linePosition >= chartArea.left && linePosition <= chartArea.right) {
+                        ctx.save();
+                        ctx.strokeStyle = '#000000'; // Černá barva
+                        ctx.lineWidth = 2;
+                        ctx.setLineDash([]);
+                        
+                        ctx.beginPath();
+                        ctx.moveTo(linePosition, chartArea.top);
+                        ctx.lineTo(linePosition, chartArea.bottom);
+                        ctx.stroke();
+                        ctx.restore();
+                    }
+                }
+            };
+            
+            priceChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: validData.map(item => item.hour),
+                    datasets: [{
+                        label: 'Celková cena (Kč/kWh)',
+                        data: validData.map(item => item.totalPrice),
+                        backgroundColor: colors.map(color => color + '80'),
+                        borderColor: colors,
+                        borderWidth: 2
+                    }]
+                },
+                plugins: [verticalLinePlugin], // Přidáme náš plugin
                 options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: true
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        max: 10,
-                        title: {
-                            display: true,
-                            text: 'Cena (Kč/kWh) - Python server není spuštěný'
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
                         }
                     },
-                    x: {
-                        title: {
-                            display: true,
-                            text: 'Hodina'
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            min: function(context) {
+                                // Najdeme minimální hodnotu v datech
+                                const data = context.chart.data.datasets[0].data;
+                                if (data.length === 0) return 0;
+                                const minValue = Math.min(...data);
+                                // Pokud je minimální hodnota záporná, nastavíme dolní mez o něco níže
+                                return minValue < 0 ? Math.floor(minValue) - 0.5 : 0;
+                            },
+                            title: {
+                                display: true,
+                                text: 'Cena (Kč/kWh)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Hodina'
+                            }
                         }
                     }
                 }
-            }
-        });
-        return;
-    }
-
-    const validData = data.filter(item => item.totalPrice !== null);
-    const colors = validData.map(item => item.isNT ? '#3182ce' : '#e53e3e');
-    
-    // Plugin pro vykreslení vertikální čáry
-    const verticalLinePlugin = {
-        id: 'verticalLine',
-        afterDraw: (chart) => {
-            const ctx = chart.ctx;
-            const chartArea = chart.chartArea;
-            
-            // Najdeme pozici pro vyznačení poledne (mezi 11 a 12)
-            const xScale = chart.scales.x;
-            const linePosition = xScale.getPixelForValue(11.5); // Poledne - mezi 11:00 a 12:00
-            
-            if (linePosition >= chartArea.left && linePosition <= chartArea.right) {
-                ctx.save();
-                ctx.strokeStyle = '#000000'; // Černá barva
-                ctx.lineWidth = 2;
-                ctx.setLineDash([]);
-                
-                ctx.beginPath();
-                ctx.moveTo(linePosition, chartArea.top);
-                ctx.lineTo(linePosition, chartArea.bottom);
-                ctx.stroke();
-                ctx.restore();
-            }
+            });
         }
-    };
-    
-    priceChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: validData.map(item => item.hour),
-            datasets: [{
-                label: 'Celková cena (Kč/kWh)',
-                data: validData.map(item => item.totalPrice),
-                backgroundColor: colors.map(color => color + '80'),
-                borderColor: colors,
-                borderWidth: 2
-            }]
-        },
-        plugins: [verticalLinePlugin], // Přidáme náš plugin
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    min: function(context) {
-                        // Najdeme minimální hodnotu v datech
-                        const data = context.chart.data.datasets[0].data;
-                        if (data.length === 0) return 0;
-                        const minValue = Math.min(...data);
-                        // Pokud je minimální hodnota záporná, nastavíme dolní mez o něco níže
-                        return minValue < 0 ? Math.floor(minValue) - 0.5 : 0;
-                    },
-                    title: {
-                        display: true,
-                        text: 'Cena (Kč/kWh)'
-                    }
-                },
-                x: {
-                    title: {
-                        display: true,
-                        text: 'Hodina'
-                    }
-                }
-            }
-        }
-    });
-}
 
         // Aktualizace tabulky
         function updateTable(data, hasNullData) {
